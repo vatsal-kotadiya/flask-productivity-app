@@ -222,13 +222,14 @@
 
 # app.py
 from flask import Flask, request, jsonify
-import joblib, os, pandas as pd, numpy as np
+import joblib, os, pandas as pd
 
 app = Flask(__name__)
 
-# load model & feature list (make sure these files exist in repo)
+# Load model & encoders
 model = joblib.load("productivity_model.pkl")
-feature_cols = joblib.load("feature_columns.pkl")  # list of columns used during training
+task_encoder = joblib.load("task_encoder.pkl")
+app_encoder = joblib.load("app_encoder.pkl")
 
 @app.route("/")
 def home():
@@ -237,40 +238,39 @@ def home():
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.get_json(force=True)
-    # accept keys task/app_name/usage_time (same names your Android app will send)
+    
+    # Get input
     usage = data.get("usage_time")
     task = data.get("task")
     app_name = data.get("app_name")
 
     if usage is None or task is None or app_name is None:
-        return jsonify({"error":"Provide usage_time, task, app_name"}), 400
+        return jsonify({"error": "Provide usage_time, task, app_name"}), 400
 
     try:
         usage = float(usage)
     except:
-        return jsonify({"error":"usage_time must be numeric"}), 400
+        return jsonify({"error": "usage_time must be numeric"}), 400
 
-    # Build input row like during training (one-hot columns present in feature_cols)
-    row = {c: 0 for c in feature_cols}
-    # numeric features (example names — adapt if your feature names differ)
-    if "usage_time" in row:
-        row["usage_time"] = usage
-    if "session_count" in row:
-        row["session_count"] = data.get("session_count", 1)
-    if "time_per_session" in row:
-        # if session_count provided, compute; otherwise fallback 1
-        sc = float(data.get("session_count", 1))
-        row["time_per_session"] = usage / (sc if sc != 0 else 1)
+    # Encode categorical features using saved encoders
+    try:
+        task_val = task_encoder.transform([task])[0]
+    except:
+        return jsonify({"error": f"Unknown task: {task}"}), 400
 
-    # set one-hot columns (they were named like "app_name_<NAME>" and "task_<NAME>")
-    app_col = f"app_name_{app_name}"
-    task_col = f"task_{task}"
-    if app_col in row:
-        row[app_col] = 1
-    if task_col in row:
-        row[task_col] = 1
+    try:
+        app_val = app_encoder.transform([app_name])[0]
+    except:
+        return jsonify({"error": f"Unknown app_name: {app_name}"}), 400
 
-    df_in = pd.DataFrame([row])[feature_cols]  # ensure same column order
+    # Build DataFrame for prediction (same order as trained model)
+    df_in = pd.DataFrame([{
+        "AppUsed": app_val,
+        "Task": task_val,
+        "TimeSpent(min)": usage
+    }])
+
+    # Predict
     pred = model.predict(df_in)[0]
     label = "Productive" if int(pred) == 1 else "Non-Productive"
     return jsonify({"prediction": label})
