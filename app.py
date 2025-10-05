@@ -84,31 +84,25 @@ def home():
     return jsonify({"message": "Smart Daily Schedule Predictor API is running!"})
 
 # 4️⃣ Prediction route
-@app.route("/predict", methods=["POST"])
+@app.route('/predict', methods=['POST'])
 def predict():
     try:
         data = request.get_json(force=True)
-        print("📩 Incoming data:", data)   # 👈 DEBUG LOG
+        print("📩 Incoming data:", data)
 
-        app_name = data.get("app_name")
-        usage_time = float(data.get("usage_time"))
-        time_period = data.get("time_period")
+        app_name = data['app_name']
+        usage_time = float(data['usage_time'])
+        time_period = data['time_period']
 
-        # Example rule (replace with your ML model if ready)
-        if time_period == "17:00–19:00" or app_name.lower() in ["instagram", "snapchat"]:
-            prediction = "Non-Productive" if usage_time > 15 else "Productive"
-        else:
-            prediction = "Productive" if usage_time <= 60 else "Non-Productive"
+        prediction = model.predict([[usage_time]])[0]  # example line
 
         return jsonify({
-            "app_name": app_name,
-            "usage_time": usage_time,
-            "time_period": time_period,
-            "prediction": prediction
+            "prediction": str(prediction),
+            "status": "success"
         })
 
     except Exception as e:
-        print("❌ Error in /predict:", e)
+        print("❌ Error:", e)
         return jsonify({"error": str(e)}), 500
 
 
