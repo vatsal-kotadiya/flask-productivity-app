@@ -97,36 +97,28 @@ def home():
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        data = request.get_json(force=True)
+        data = request.get_json()
+        print("📩 Incoming data:", data)   # 👈 DEBUG LOG
 
-        activity = data.get("Activity")
-        expected_time = float(data.get("ExpectedTime"))
-        actual_time = float(data.get("ActualTime"))
+        app_name = data.get("app_name")
+        usage_time = float(data.get("usage_time"))
+        time_period = data.get("time_period")
 
-        # Check if all inputs are provided
-        if not activity or expected_time is None or actual_time is None:
-            return jsonify({"error": "Please provide Activity, ExpectedTime, and ActualTime"}), 400
+        # Example rule (replace with your ML model if ready)
+        if time_period == "17:00–19:00" or app_name.lower() in ["instagram", "snapchat"]:
+            prediction = "Non-Productive" if usage_time > 15 else "Productive"
+        else:
+            prediction = "Productive" if usage_time <= 60 else "Non-Productive"
 
-        # Encode activity
-        activity_enc = le_activity.transform([activity])[0]
-
-        # Create feature array
-        features = np.array([[activity_enc, expected_time, actual_time]])
-
-        # Predict
-        pred = model.predict(features)[0]
-        label = le_label.inverse_transform([pred])[0]
-
-        # Return result
-        result = {
-            "Activity": activity,
-            "ExpectedTime": expected_time,
-            "ActualTime": actual_time,
-            "Prediction": label
-        }
-        return jsonify(result)
+        return jsonify({
+            "app_name": app_name,
+            "usage_time": usage_time,
+            "time_period": time_period,
+            "prediction": prediction
+        })
 
     except Exception as e:
+        print("❌ Error in /predict:", e)
         return jsonify({"error": str(e)}), 500
 
 
