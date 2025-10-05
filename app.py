@@ -1,280 +1,137 @@
+# # app.py
 # from flask import Flask, request, jsonify
-# import joblib
-
-# app = Flask(__name__)
-# model = joblib.load("productivity_model.pkl")  # load your saved model
-
-# # encode category (same as training)
-# def encode(cat):
-#     mapping = {'social':0, 'work':1, 'games':2}
-#     return mapping.get(cat.lower(), 3)
-
-# @app.route('/predict', methods=['POST'])
-# def predict():
-#     data = request.get_json()
-#     usage = float(data['usage_time'])
-#     sessions = float(data['session_count'])
-#     category = data['app_name']
-    
-#     X = [[usage, sessions, encode(category)]]
-#     pred = model.predict(X)   # 0 = Non-Productive, 1 = Productive
-#     label = "Productive" if int(pred[0]) == 1 else "Non-Productive"
-    
-#     return jsonify({"prediction": label})
-
-# if __name__ == "__main__":
-#     app.run(host="0.0.0.0", port=5000)
-
-
-# from flask import Flask, request, jsonify
-# import joblib
+# import joblib, os, pandas as pd
 
 # app = Flask(__name__)
 
-# # Load your saved model
-# model = joblib.load("productivity_model.pkl")  # make sure this file is in the same folder
-
-# # Example category encoding (match how you trained the model)
-# def encode(cat):
-#     mapping = {'social':0, 'work':1, 'games':2}  # add your categories
-#     return mapping.get(cat.lower(), 3)  # default to 3 if unknown
-
-# @app.route('/predict', methods=['POST'])
-# def predict():
-#     data = request.get_json()
-#     usage = float(data['usage_time'])
-#     sessions = float(data['session_count'])
-#     category = data['app_name']
-
-#     # Prepare features for model
-#     X = [[usage, sessions, encode(category)]]
-#     pred = model.predict(X)           # 0 = Non-Productive, 1 = Productive
-#     label = "Productive" if int(pred[0]) == 1 else "Non-Productive"
-
-#     return jsonify({"prediction": label})
-
-# if __name__ == "__main__":
-#     app.run(host="0.0.0.0", port=5000)
-
-
-
-
-############## this code working first 
-
-# from flask import Flask, request, jsonify
-# import joblib
-
-# app = Flask(__name__)
-
-# # Load model
-# model = joblib.load("productivity_model.pkl")
-
-# # Example category encoding
-# def encode(cat):
-#     mapping = {'social':0, 'work':1, 'games':2}
-#     return mapping.get(cat.lower(), 3)
-
-# # Default route (works in browser)
-# @app.route("/", methods=["GET"])
-# def home():
-#     # Example default input
-#     usage = 30
-#     sessions = 2
-#     category = "Social"
-
-#     X = [[usage, sessions, encode(category)]]
-#     pred = model.predict(X)
-#     label = "Productive" if int(pred[0]) == 1 else "Non-Productive"
-
-#     return jsonify({
-#         "message": "Flask API is running 🚀",
-#         "default_input": {"usage_time": usage, "session_count": sessions, "app_name": category},
-#         "prediction": label
-#     })
-
-# # POST route for real predictions
-# @app.route('/predict', methods=['POST'])
-# def predict():
-#     data = request.get_json()
-#     usage = float(data['usage_time'])
-#     sessions = float(data['session_count'])
-#     category = data['app_name']
-
-#     X = [[usage, sessions, encode(category)]]
-#     pred = model.predict(X)
-#     label = "Productive" if int(pred[0]) == 1 else "Non-Productive"
-
-#     return jsonify({"prediction": label})
-
-# if __name__ == "__main__":
-#     app.run(host="0.0.0.0", port=5000)
-
-
-
-
-
-# from flask import Flask, request, jsonify
-# import joblib
-
-# app = Flask(__name__)
-
-# # Load model + encoders
-# model = joblib.load("productivity_model.pkl")
-# le_task = joblib.load("label_encoder_task.pkl")
-# le_app = joblib.load("label_encoder_app.pkl")
-
-# @app.route("/predict", methods=["POST"])
-# def predict():
-#     data = request.get_json(force=True)
-#     print("Received data:", data)
-
-#     # Extract input
-#     usage_time = data["usage_time"]
-#     session_count = data["session_count"]
-#     task = data["task"]
-#     app_name = data["app_name"]
-
-#     # Encode using saved encoders
-#     encoded_task = le_task.transform([task])[0]
-#     encoded_app = le_app.transform([app_name])[0]
-
-#     # Create feature vector
-#     features = [[encoded_app, encoded_task, usage_time, session_count]]
-
-#     # Predict
-#     prediction = model.predict(features)[0]
-#     label = "Productive" if prediction == 1 else "Non-Productive"
-
-#     # return jsonify({"prediction": label})
-#     return jsonify({"error": "Please provide 'usage_time' and 'app_name'"}), 400
-
-
-# if __name__ == "__main__":
-#     app.run(debug=True)
-
-
-
-
-
-
-# from flask import Flask, request, jsonify
-# import joblib
-
-# # 🔹 Load trained model & encoders
+# # Load model & encoders
 # model = joblib.load("productivity_model.pkl")
 # task_encoder = joblib.load("task_encoder.pkl")
 # app_encoder = joblib.load("app_encoder.pkl")
 
-# app = Flask(__name__)
-
 # @app.route("/")
 # def home():
-#     return "🚀 Productivity Prediction API is running!"
+#     return "OK - ML API"
 
 # @app.route("/predict", methods=["POST"])
 # def predict():
+#     data = request.get_json(force=True)
+    
+#     # Get input
+#     usage = data.get("usage_time")
+#     task = data.get("task")
+#     app_name = data.get("app_name")
+
+#     if usage is None or task is None or app_name is None:
+#         return jsonify({"error": "Provide usage_time, task, app_name"}), 400
+
 #     try:
-#         data = request.get_json()
+#         usage = float(usage)
+#     except:
+#         return jsonify({"error": "usage_time must be numeric"}), 400
 
-#         usage_time = data.get("usage_time")
-#         task = data.get("task")
-#         app_name = data.get("app_name")
+#     # Encode categorical features using saved encoders
+#     try:
+#         task_val = task_encoder.transform([task])[0]
+#     except:
+#         return jsonify({"error": f"Unknown task: {task}"}), 400
 
-#         # Validate inputs
-#         if usage_time is None or task is None or app_name is None:
-#             return jsonify({"error": "Missing required fields"}), 400
+#     try:
+#         app_val = app_encoder.transform([app_name])[0]
+#     except:
+#         return jsonify({"error": f"Unknown app_name: {app_name}"}), 400
 
-#         # Encode categorical inputs
-#         try:
-#             task_encoded = task_encoder.transform([task])[0]
-#         except:
-#             return jsonify({"error": f"Task '{task}' not found in training data"}), 400
+#     # Build DataFrame for prediction (same order as trained model)
+#     df_in = pd.DataFrame([{
+#         "AppUsed": app_val,
+#         "Task": task_val,
+#         "TimeSpent(min)": usage
+#     }])
 
-#         try:
-#             app_encoded = app_encoder.transform([app_name])[0]
-#         except:
-#             return jsonify({"error": f"App '{app_name}' not found in training data"}), 400
-
-#         # Prepare features
-#         features = [[app_encoded, task_encoded, usage_time]]
-
-#         # Predict
-#         prediction = model.predict(features)[0]
-#         result = "Productive" if prediction == 1 else "Non-Productive"
-
-#         return jsonify({"prediction": result})
-
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
-
-
-# # if __name__ == "__main__":
-# #     app.run(debug=True)
+#     # Predict
+#     pred = model.predict(df_in)[0]
+#     label = "Productive" if int(pred) == 1 else "Non-Productive"
+#     return jsonify({"prediction": label})
 
 # if __name__ == "__main__":
-#     app.run(host="0.0.0.0", port=5000, debug=True)
+#     port = int(os.environ.get("PORT", 5000))
+#     app.run(host="0.0.0.0", port=port)
 
 
 
 
 
 
+# ============================================================
+# 📘 Flask API for Smart Daily Schedule ML Model
+# ============================================================
 
-# app.py
 from flask import Flask, request, jsonify
-import joblib, os, pandas as pd
+import pickle
+import numpy as np
 
+# ---------------------------------------
+# 1️⃣ Initialize Flask app
+# ---------------------------------------
 app = Flask(__name__)
 
-# Load model & encoders
-model = joblib.load("productivity_model.pkl")
-task_encoder = joblib.load("task_encoder.pkl")
-app_encoder = joblib.load("app_encoder.pkl")
+# ---------------------------------------
+# 2️⃣ Load trained model and encoders
+# ---------------------------------------
+try:
+    model, le_activity, le_label = pickle.load(open("schedule_predictor.pkl", "rb"))
+    print("✅ Model and encoders loaded successfully!")
+except Exception as e:
+    print("❌ Error loading model:", e)
 
-@app.route("/")
+# ---------------------------------------
+# 3️⃣ Home route
+# ---------------------------------------
+@app.route("/", methods=["GET"])
 def home():
-    return "OK - ML API"
+    return jsonify({"message": "Smart Daily Schedule Predictor API is running!"})
 
+# ---------------------------------------
+# 4️⃣ Prediction route
+# ---------------------------------------
 @app.route("/predict", methods=["POST"])
 def predict():
-    data = request.get_json(force=True)
-    
-    # Get input
-    usage = data.get("usage_time")
-    task = data.get("task")
-    app_name = data.get("app_name")
-
-    if usage is None or task is None or app_name is None:
-        return jsonify({"error": "Provide usage_time, task, app_name"}), 400
-
     try:
-        usage = float(usage)
-    except:
-        return jsonify({"error": "usage_time must be numeric"}), 400
+        data = request.get_json(force=True)
 
-    # Encode categorical features using saved encoders
-    try:
-        task_val = task_encoder.transform([task])[0]
-    except:
-        return jsonify({"error": f"Unknown task: {task}"}), 400
+        activity = data.get("Activity")
+        expected_time = float(data.get("ExpectedTime"))
+        actual_time = float(data.get("ActualTime"))
 
-    try:
-        app_val = app_encoder.transform([app_name])[0]
-    except:
-        return jsonify({"error": f"Unknown app_name: {app_name}"}), 400
+        # Check if all inputs are provided
+        if not activity or expected_time is None or actual_time is None:
+            return jsonify({"error": "Please provide Activity, ExpectedTime, and ActualTime"}), 400
 
-    # Build DataFrame for prediction (same order as trained model)
-    df_in = pd.DataFrame([{
-        "AppUsed": app_val,
-        "Task": task_val,
-        "TimeSpent(min)": usage
-    }])
+        # Encode activity
+        activity_enc = le_activity.transform([activity])[0]
 
-    # Predict
-    pred = model.predict(df_in)[0]
-    label = "Productive" if int(pred) == 1 else "Non-Productive"
-    return jsonify({"prediction": label})
+        # Create feature array
+        features = np.array([[activity_enc, expected_time, actual_time]])
 
+        # Predict
+        pred = model.predict(features)[0]
+        label = le_label.inverse_transform([pred])[0]
+
+        # Return result
+        result = {
+            "Activity": activity,
+            "ExpectedTime": expected_time,
+            "ActualTime": actual_time,
+            "Prediction": label
+        }
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------
+# 5️⃣ Run the app
+# ---------------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000, debug=True)

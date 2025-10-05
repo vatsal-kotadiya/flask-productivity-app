@@ -1,0 +1,10 @@
+Time Range,Expected Activity,Expected Duration (min)
+06:00 to 07:00,Wake Up/Exercise,60
+07:00 to 08:00,Breakfast,30
+08:00 to 12:00,Study/Work,240
+12:00 to 13:00,Lunch,45
+13:00 to 17:00,Study/Work,240
+17:00 to 19:00,Play/Social Media,60
+19:00 to 20:00,Dinner,30
+20:00 to 22:00,Revision/Study,120
+22:00 to 06:00,Sleep,480
