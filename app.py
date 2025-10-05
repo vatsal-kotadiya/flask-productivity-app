@@ -63,50 +63,77 @@
 
 
 from flask import Flask, request, jsonify
-import joblib
+from flask_cors import CORS
+import datetime
 
 app = Flask(__name__)
+CORS(app)
 
-# --- Load Model ---
-try:
-    model = joblib.load("smart_usage_model.pkl")
-    app_encoder = joblib.load("app_encoder.pkl")
-    time_encoder = joblib.load("time_encoder.pkl")
-    print("✅ Model & encoders loaded successfully!")
-except Exception as e:
-    print("❌ Error loading model:", e)
-
-@app.route('/')
+@app.route("/", methods=["GET"])
 def home():
-    return "✅ Smart Productivity API is Running!"
+    return "✅ Flask Productivity API is running!"
 
-@app.route('/predict', methods=['POST'])
+@app.route("/predict", methods=["POST"])
 def predict():
     try:
         data = request.get_json()
         print("📩 Incoming data:", data)
 
-        app_name = data['app_name']
-        usage_time = float(data['usage_time'])
-        time_period = data['time_period']
+        app_name = data.get("app_name", "").lower()
+        usage_time = float(data.get("usage_time", 0))
+        time_period = data.get("time_period", "")
 
-        app_encoded = app_encoder.transform([app_name])[0]
-        time_encoded = time_encoder.transform([time_period])[0]
+        # --- Logic Based on Your Rules ---
+        productive_apps = ["udemy", "notes", "chrome"]
+        distracting_apps = ["instagram", "whatsapp", "snapchat", "youtube"]
 
-        prediction = model.predict([[app_encoded, usage_time, time_encoded]])[0]
-        result = "Productive" if prediction == 1 else "Distracting"
+        # Simple schedule logic (study/eat/exercise hours)
+        study_hours = ["08:00–12:00", "13:00–17:00", "20:00–22:00"]
+        food_hours = ["07:00–08:00", "12:00–13:00", "19:00–20:00"]
+        exercise_hours = ["06:00–07:00"]
+        sleep_hours = ["22:00–06:00"]
 
-        return jsonify({
+        # Default
+        result = "Neutral"
+
+        # --- Apply Conditions ---
+        if any(a in app_name for a in distracting_apps):
+            if time_period in study_hours:
+                result = "Non-Productive"
+            else:
+                result = "Neutral"
+
+        elif any(a in app_name for a in productive_apps):
+            if time_period in food_hours or time_period in exercise_hours:
+                result = "Non-Productive"
+            else:
+                # If used less than expected threshold, consider it productive
+                if usage_time <= 20:
+                    result = "Productive"
+                else:
+                    result = "Non-Productive"
+
+        elif "sleep" in time_period:
+            result = "Productive (Rest)"
+        else:
+            result = "Neutral"
+
+        response = {
             "app_name": app_name,
             "usage_time": usage_time,
             "time_period": time_period,
-            "prediction": result
-        })
+            "prediction": result,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        print("✅ Prediction:", response)
+        return jsonify(response), 200
 
     except Exception as e:
-        print(f"❌ Error in /predict: {e}")
+        print("❌ Error:", e)
         return jsonify({"error": str(e)}), 500
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
