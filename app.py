@@ -62,50 +62,51 @@
 
 
 
-# 📘 Flask API for Smart Daily Schedule ML Model
-
 from flask import Flask, request, jsonify
-import pickle
-import numpy as np
+import joblib
 
-# 1️⃣ Initialize Flask app
 app = Flask(__name__)
 
-# 2️⃣ Load trained model and encoders
+# --- Load Model ---
 try:
-    model, le_activity, le_label = pickle.load(open("schedule_predictor.pkl", "rb"))
-    print("✅ Model and encoders loaded successfully!")
+    model = joblib.load("smart_usage_model.pkl")
+    app_encoder = joblib.load("app_encoder.pkl")
+    time_encoder = joblib.load("time_encoder.pkl")
+    print("✅ Model & encoders loaded successfully!")
 except Exception as e:
     print("❌ Error loading model:", e)
 
-# 3️⃣ Home route
-@app.route("/", methods=["GET"])
+@app.route('/')
 def home():
-    return jsonify({"message": "Smart Daily Schedule Predictor API is running!"})
+    return "✅ Smart Productivity API is Running!"
 
-# 4️⃣ Prediction route
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        data = request.get_json(force=True)
+        data = request.get_json()
         print("📩 Incoming data:", data)
 
         app_name = data['app_name']
         usage_time = float(data['usage_time'])
         time_period = data['time_period']
 
-        prediction = model.predict([[usage_time]])[0]  # example line
+        app_encoded = app_encoder.transform([app_name])[0]
+        time_encoded = time_encoder.transform([time_period])[0]
+
+        prediction = model.predict([[app_encoded, usage_time, time_encoded]])[0]
+        result = "Productive" if prediction == 1 else "Distracting"
 
         return jsonify({
-            "prediction": str(prediction),
-            "status": "success"
+            "app_name": app_name,
+            "usage_time": usage_time,
+            "time_period": time_period,
+            "prediction": result
         })
 
     except Exception as e:
-        print("❌ Error:", e)
+        print(f"❌ Error in /predict: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-# 5️⃣ Run the app
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)

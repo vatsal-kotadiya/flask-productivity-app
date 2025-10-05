@@ -50,90 +50,83 @@
 
 
 
-# =====================================================
-# 📘 Smart Daily Schedule ML Model - Productivity Predictor
-# =====================================================
-
 import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+import joblib
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
-import pickle
 
-# ---------------------------------------
-# 1️⃣ Load smart_daily_schedule.csv
-# ---------------------------------------
-df = pd.read_csv("smart_daily_schedule.csv")
-print("✅ Schedule loaded successfully:")
-print(df.head())
+# --- 1️⃣ Load schedule ---
+schedule = pd.read_csv("smart_daily_schedule.csv")
 
-# ---------------------------------------
-# 2️⃣ Create training samples
-# ---------------------------------------
-# We'll simulate multiple user behavior cases
-data = []
+# --- 2️⃣ Define app behavior categories ---
+study_apps = ["Udemy", "Notes", "Chrome", "YouTube"]
+distracting_apps = ["Instagram", "WhatsApp", "Snapchat"]
 
-for _, row in df.iterrows():
+rows = []
+
+# --- 3️⃣ Generate smart dataset ---
+for _, row in schedule.iterrows():
+    time_period = row["Time Range"]
+    expected_time = row["Expected Duration (min)"]
     activity = row["Expected Activity"]
-    expected = row["Expected Duration (min)"]
 
-    # Generate 100 random samples per activity
-    for _ in range(100):
-        actual = np.random.randint(5, expected * 2)  # user usage (5 to 2x expected)
-
-        # Labeling logic
-        # Too short or too long = Non-Productive
-        if expected * 0.7 <= actual <= expected * 1.2:
+    for app in study_apps + distracting_apps:
+        # Try different usage patterns
+        for usage in [expected_time * 0.5, expected_time, expected_time * 1.5]:
+            
+            # --- 📊 Rule-based labeling logic ---
             label = "Productive"
-        else:
-            label = "Non-Productive"
 
-        data.append([activity, expected, actual, label])
+            # CASE 1️⃣ — Study time + using social media → Distracting
+            if "Study" in activity and app in distracting_apps:
+                label = "Distracting"
 
-# Create dataframe
-train_df = pd.DataFrame(data, columns=["Activity", "ExpectedTime", "ActualTime", "Label"])
+            # CASE 2️⃣ — Meal/Exercise time + study app → Productive
+            elif any(x in activity for x in ["Breakfast", "Lunch", "Dinner", "Exercise"]) and app in study_apps:
+                label = "Productive"
 
-print("\n✅ Training dataset created with", len(train_df), "records")
+            # CASE 3️⃣ — Study time + study app → Productive
+            elif "Study" in activity and app in study_apps:
+                label = "Productive"
 
-# ---------------------------------------
-# 3️⃣ Encode text data
-# ---------------------------------------
-le_activity = LabelEncoder()
-le_label = LabelEncoder()
+            # CASE 4️⃣ — Study time + social apps + long usage → Distracting
+            if app in distracting_apps and usage > expected_time * 0.8:
+                label = "Distracting"
 
-train_df["Activity_enc"] = le_activity.fit_transform(train_df["Activity"])
-train_df["Label_enc"] = le_label.fit_transform(train_df["Label"])  # 0 = Non-Productive, 1 = Productive
+            # CASE 5️⃣ — Meal time + long usage of study apps → Distracting
+            if any(x in activity for x in ["Breakfast", "Lunch", "Dinner"]) and app in study_apps and usage > expected_time * 1.2:
+                label = "Distracting"
 
-# ---------------------------------------
-# 4️⃣ Train-test split
-# ---------------------------------------
-X = train_df[["Activity_enc", "ExpectedTime", "ActualTime"]]
-y = train_df["Label_enc"]
+            rows.append([app, time_period, usage, label])
 
+# --- 4️⃣ Create DataFrame ---
+df = pd.DataFrame(rows, columns=["app_name", "time_period", "usage_time", "label"])
+
+# --- 5️⃣ Encode text features ---
+app_encoder = LabelEncoder()
+time_encoder = LabelEncoder()
+
+df["app_encoded"] = app_encoder.fit_transform(df["app_name"])
+df["time_encoded"] = time_encoder.fit_transform(df["time_period"])
+
+X = df[["app_encoded", "usage_time", "time_encoded"]]
+y = df["label"].map({"Productive": 1, "Distracting": 0})
+
+# --- 6️⃣ Train model ---
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# ---------------------------------------
-# 5️⃣ Train RandomForest model
-# ---------------------------------------
-model = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42)
+model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
-# ---------------------------------------
-# 6️⃣ Evaluate model
-# ---------------------------------------
+# --- 7️⃣ Evaluate ---
 y_pred = model.predict(X_test)
-acc = accuracy_score(y_test, y_pred)
-print("\n🎯 Model Accuracy: {:.2f}%".format(acc * 100))
-print("\n📊 Classification Report:")
-print(classification_report(y_test, y_pred, target_names=le_label.classes_))
+print("\n✅ Accuracy:", round(accuracy_score(y_test, y_pred) * 100, 2), "%")
+print("\n📊 Classification Report:\n", classification_report(y_test, y_pred))
 
-# ---------------------------------------
-# 7️⃣ Save model + encoder
-# ---------------------------------------
-with open("schedule_predictor.pkl", "wb") as f:
-    pickle.dump((model, le_activity, le_label), f)
+# --- 8️⃣ Save model and encoders ---
+joblib.dump(model, "smart_usage_model.pkl")
+joblib.dump(app_encoder, "app_encoder.pkl")
+joblib.dump(time_encoder, "time_encoder.pkl")
 
-print("\n✅ Model saved successfully as 'schedule_predictor.pkl'")
-
+print("\n✅ Model & Encoders saved successfully!")
