@@ -76,50 +76,56 @@ def home():
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True)
         print("📩 Incoming data:", data)
 
         app_name = data.get("app_name", "").lower()
         usage_time = float(data.get("usage_time", 0))
         time_period = data.get("time_period", "")
 
-        # --- Logic Based on Your Rules ---
+        # Define app groups
         productive_apps = ["udemy", "notes", "chrome"]
         distracting_apps = ["instagram", "whatsapp", "snapchat", "youtube"]
 
-        # Simple schedule logic (study/eat/exercise hours)
+        # Define schedule periods
         study_hours = ["08:00–12:00", "13:00–17:00", "20:00–22:00"]
         food_hours = ["07:00–08:00", "12:00–13:00", "19:00–20:00"]
         exercise_hours = ["06:00–07:00"]
         sleep_hours = ["22:00–06:00"]
 
         # Default
-        result = "Neutral"
+        result = "Productive"
 
-        # --- Apply Conditions ---
+        # --- Apply Logic ---
+        # If distracting app during study hours → Distracting
         if any(a in app_name for a in distracting_apps):
             if time_period in study_hours:
-                result = "Non-Productive"
+                result = "Distracting"
             else:
-                result = "Neutral"
+                result = "Productive"
 
+        # If productive app used during food/exercise → Distracting
         elif any(a in app_name for a in productive_apps):
             if time_period in food_hours or time_period in exercise_hours:
-                result = "Non-Productive"
+                result = "Distracting"
             else:
-                # If used less than expected threshold, consider it productive
-                if usage_time <= 20:
-                    result = "Productive"
-                else:
-                    result = "Non-Productive"
+                # Overuse check: >20 mins becomes distracting
+                result = "Productive" if usage_time <= 20 else "Distracting"
 
-        elif "sleep" in time_period:
-            result = "Productive (Rest)"
+        # Sleep time logic (rest is productive)
+        elif time_period in sleep_hours:
+            result = "Productive"
+
+        # Everything else → Distracting
         else:
-            result = "Neutral"
+            result = "Distracting"
+
+        # Final clean-up to only return two labels
+        if result.lower() not in ["productive", "distracting"]:
+            result = "Distracting"
 
         response = {
-            "app_name": app_name,
+            "app_name": app_name.capitalize(),
             "usage_time": usage_time,
             "time_period": time_period,
             "prediction": result,
@@ -136,4 +142,3 @@ def predict():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-
