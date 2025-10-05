@@ -62,42 +62,32 @@
 
 
 
-# ============================================================
 # 📘 Flask API for Smart Daily Schedule ML Model
-# ============================================================
 
 from flask import Flask, request, jsonify
 import pickle
 import numpy as np
 
-# ---------------------------------------
 # 1️⃣ Initialize Flask app
-# ---------------------------------------
 app = Flask(__name__)
 
-# ---------------------------------------
 # 2️⃣ Load trained model and encoders
-# ---------------------------------------
 try:
     model, le_activity, le_label = pickle.load(open("schedule_predictor.pkl", "rb"))
     print("✅ Model and encoders loaded successfully!")
 except Exception as e:
     print("❌ Error loading model:", e)
 
-# ---------------------------------------
 # 3️⃣ Home route
-# ---------------------------------------
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"message": "Smart Daily Schedule Predictor API is running!"})
 
-# ---------------------------------------
 # 4️⃣ Prediction route
-# ---------------------------------------
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True)
         print("📩 Incoming data:", data)   # 👈 DEBUG LOG
 
         app_name = data.get("app_name")
@@ -122,8 +112,6 @@ def predict():
         return jsonify({"error": str(e)}), 500
 
 
-# ---------------------------------------
 # 5️⃣ Run the app
-# ---------------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
