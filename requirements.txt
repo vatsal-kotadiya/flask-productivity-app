@@ -1,6 +1,7 @@
 setuptools
 Cython
 Flask
+flask-cors
 scikit-learn
 pandas
 numpy
