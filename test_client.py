@@ -29,15 +29,38 @@
 # print(res.json())
 
 
-import requests
+# import requests
 
+# data = {
+#     "app_name": "Instagram",
+#     "usage_time": 0,
+#     "time_period": "13:00-17:00"
+# }
+
+# response = requests.post("http://127.0.0.1:5000/predict", json=data)
+
+# print("Status Code:", response.status_code)
+# print("Response:", response.text)
+
+
+
+
+
+
+# Final code 
+
+import requests
+import json
+
+url = "http://127.0.0.1:5000/predict"  # Local testing (use Render URL after deploy)
+
+# Example test data
 data = {
-    "app_name": "Instagram",
-    "usage_time": 0,
+    "app_name": "Chrome",
+    "usage_time": 50,
     "time_period": "13:00-17:00"
 }
 
-response = requests.post("http://127.0.0.1:5000/predict", json=data)
-
+response = requests.post(url, json=data)
 print("Status Code:", response.status_code)
-print("Response:", response.text)
+print("Response:", json.dumps(response.json(), indent=4))

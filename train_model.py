@@ -50,83 +50,142 @@
 
 
 
-import pandas as pd
-import joblib
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+# import pandas as pd
+# import joblib
+# from sklearn.ensemble import RandomForestClassifier
+# from sklearn.preprocessing import LabelEncoder
+# from sklearn.model_selection import train_test_split
+# from sklearn.metrics import accuracy_score, classification_report
 
-# --- 1️⃣ Load schedule ---
-schedule = pd.read_csv("smart_daily_schedule.csv")
+# # --- 1️⃣ Load schedule ---
+# schedule = pd.read_csv("smart_daily_schedule.csv")
 
-# --- 2️⃣ Define app behavior categories ---
-study_apps = ["Udemy", "Notes", "Chrome", "YouTube"]
-distracting_apps = ["Instagram", "WhatsApp", "Snapchat"]
+# # --- 2️⃣ Define app behavior categories ---
+# study_apps = ["Udemy", "Notes", "Chrome", "YouTube"]
+# distracting_apps = ["Instagram", "WhatsApp", "Snapchat"]
 
-rows = []
+# rows = []
 
-# --- 3️⃣ Generate smart dataset ---
-for _, row in schedule.iterrows():
-    time_period = row["Time Range"]
-    expected_time = row["Expected Duration (min)"]
-    activity = row["Expected Activity"]
+# # --- 3️⃣ Generate smart dataset ---
+# for _, row in schedule.iterrows():
+#     time_period = row["Time Range"]
+#     expected_time = row["Expected Duration (min)"]
+#     activity = row["Expected Activity"]
 
-    for app in study_apps + distracting_apps:
-        # Try different usage patterns
-        for usage in [expected_time * 0.5, expected_time, expected_time * 1.5]:
+#     for app in study_apps + distracting_apps:
+#         # Try different usage patterns
+#         for usage in [expected_time * 0.5, expected_time, expected_time * 1.5]:
             
-            # --- 📊 Rule-based labeling logic ---
-            label = "Productive"
+#             # --- 📊 Rule-based labeling logic ---
+#             label = "Productive"
 
-            # CASE 1️⃣ — Study time + using social media → Distracting
-            if "Study" in activity and app in distracting_apps:
-                label = "Distracting"
+#             # CASE 1️⃣ — Study time + using social media → Distracting
+#             if "Study" in activity and app in distracting_apps:
+#                 label = "Distracting"
 
-            # CASE 2️⃣ — Meal/Exercise time + study app → Productive
-            elif any(x in activity for x in ["Breakfast", "Lunch", "Dinner", "Exercise"]) and app in study_apps:
-                label = "Productive"
+#             # CASE 2️⃣ — Meal/Exercise time + study app → Productive
+#             elif any(x in activity for x in ["Breakfast", "Lunch", "Dinner", "Exercise"]) and app in study_apps:
+#                 label = "Productive"
 
-            # CASE 3️⃣ — Study time + study app → Productive
-            elif "Study" in activity and app in study_apps:
-                label = "Productive"
+#             # CASE 3️⃣ — Study time + study app → Productive
+#             elif "Study" in activity and app in study_apps:
+#                 label = "Productive"
 
-            # CASE 4️⃣ — Study time + social apps + long usage → Distracting
-            if app in distracting_apps and usage > expected_time * 0.8:
-                label = "Distracting"
+#             # CASE 4️⃣ — Study time + social apps + long usage → Distracting
+#             if app in distracting_apps and usage > expected_time * 0.8:
+#                 label = "Distracting"
 
-            # CASE 5️⃣ — Meal time + long usage of study apps → Distracting
-            if any(x in activity for x in ["Breakfast", "Lunch", "Dinner"]) and app in study_apps and usage > expected_time * 1.2:
-                label = "Distracting"
+#             # CASE 5️⃣ — Meal time + long usage of study apps → Distracting
+#             if any(x in activity for x in ["Breakfast", "Lunch", "Dinner"]) and app in study_apps and usage > expected_time * 1.2:
+#                 label = "Distracting"
 
-            rows.append([app, time_period, usage, label])
+#             rows.append([app, time_period, usage, label])
 
-# --- 4️⃣ Create DataFrame ---
-df = pd.DataFrame(rows, columns=["app_name", "time_period", "usage_time", "label"])
+# # --- 4️⃣ Create DataFrame ---
+# df = pd.DataFrame(rows, columns=["app_name", "time_period", "usage_time", "label"])
 
-# --- 5️⃣ Encode text features ---
+# # --- 5️⃣ Encode text features ---
+# app_encoder = LabelEncoder()
+# time_encoder = LabelEncoder()
+
+# df["app_encoded"] = app_encoder.fit_transform(df["app_name"])
+# df["time_encoded"] = time_encoder.fit_transform(df["time_period"])
+
+# X = df[["app_encoded", "usage_time", "time_encoded"]]
+# y = df["label"].map({"Productive": 1, "Distracting": 0})
+
+# # --- 6️⃣ Train model ---
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# model = RandomForestClassifier(n_estimators=100, random_state=42)
+# model.fit(X_train, y_train)
+
+# # --- 7️⃣ Evaluate ---
+# y_pred = model.predict(X_test)
+# print("\n✅ Accuracy:", round(accuracy_score(y_test, y_pred) * 100, 2), "%")
+# print("\n📊 Classification Report:\n", classification_report(y_test, y_pred))
+
+# # --- 8️⃣ Save model and encoders ---
+# joblib.dump(model, "smart_usage_model.pkl")
+# joblib.dump(app_encoder, "app_encoder.pkl")
+# joblib.dump(time_encoder, "time_encoder.pkl")
+
+# print("\n✅ Model & Encoders saved successfully!")
+
+
+
+
+
+
+# Final code
+
+# train_model.py
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+
+# 1️⃣ Load dataset
+df = pd.read_csv("app_usage.csv")
+
+print("📊 Dataset Loaded Successfully!")
+print(df.head())
+
+# 2️⃣ Encode categorical columns
 app_encoder = LabelEncoder()
 time_encoder = LabelEncoder()
 
-df["app_encoded"] = app_encoder.fit_transform(df["app_name"])
-df["time_encoded"] = time_encoder.fit_transform(df["time_period"])
+df['app_name_encoded'] = app_encoder.fit_transform(df['app_name'])
+df['time_period_encoded'] = time_encoder.fit_transform(df['time_period'])
 
-X = df[["app_encoded", "usage_time", "time_encoded"]]
-y = df["label"].map({"Productive": 1, "Distracting": 0})
+# 3️⃣ Define features (X) and target (y)
+X = df[['app_name_encoded', 'usage_time', 'time_period_encoded']]
+y = df['label']  # Assuming 'label' column contains 'Productive' or 'Distracting'
 
-# --- 6️⃣ Train model ---
+# Encode target label
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+
+# 4️⃣ Split dataset
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 5️⃣ Train model
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
-# --- 7️⃣ Evaluate ---
+# 6️⃣ Predict and evaluate
 y_pred = model.predict(X_test)
-print("\n✅ Accuracy:", round(accuracy_score(y_test, y_pred) * 100, 2), "%")
-print("\n📊 Classification Report:\n", classification_report(y_test, y_pred))
+accuracy = accuracy_score(y_test, y_pred)
 
-# --- 8️⃣ Save model and encoders ---
-joblib.dump(model, "smart_usage_model.pkl")
+print(f"✅ Model trained successfully with accuracy: {accuracy * 100:.2f}%\n")
+print("🔍 Classification Report:")
+print(classification_report(y_test, y_pred, target_names=label_encoder.classes_))
+
+# 7️⃣ Save model and encoders
+joblib.dump(model, "model.pkl")
 joblib.dump(app_encoder, "app_encoder.pkl")
 joblib.dump(time_encoder, "time_encoder.pkl")
+joblib.dump(label_encoder, "label_encoder.pkl")
 
-print("\n✅ Model & Encoders saved successfully!")
+print("💾 Model and encoders saved successfully!")
